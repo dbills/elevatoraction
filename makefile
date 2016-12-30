@@ -12,10 +12,10 @@ save1:
 
 
 # use smartdos, it seems to work witht he H: drive properly
-atari1:
-	gcc makeexe.c -o makeexe
-	rm -f A.EXE
-	dasm ea.asm -f3 -oA.EXE
-	hd A.EXE
+atari1: makeexe
+	dasm ea.asm -f3 -oA.EXE -lea.lst
 	./makeexe A.EXE
-	hd A.EXE
+	cp A.EXE ~/atari_disk
+
+makeexe : makeexe.c
+	gcc $^ -o $@

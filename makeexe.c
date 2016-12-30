@@ -27,13 +27,13 @@ int main(int argc,char **argv) {
   FILE *f = fopen(argv[1],"r+b");
   if(f) {
     fread(&header,sizeof(header),1,f);
-    printf("start=%x end=%d\n",header.start,header.end);
     struct stat statbuf;
     if(stat(argv[1],&statbuf)!=0) {
       fprintf(stderr,"stat: %d",errno);
       exit(1);
     }
     header.end = header.start + statbuf.st_size - sizeof(header);
+    printf("start=0x%x end=0x%x\n",header.start,header.end);
     fseek(f,0,SEEK_SET);
     fwrite(&header,sizeof(header),1,f);
     // append a segment that causes it to 'run'
