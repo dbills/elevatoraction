@@ -81,6 +81,8 @@
 .done
         endm
 
+;; EQUATES
+P0HGT   equ       8            ;player 0 height
 MYPMB   equ       $1200
 PMBASE  equ       $D407         ;54279
 SDMCTL  equ       $22F          ;559
@@ -91,28 +93,36 @@ PCOLR0  equ       $2C0          ;704
 JIFFYH  equ       18       
 JIFFYM  equ       19
 JIFFYL  equ       20
+STICK0  equ       632
 
-SMYPMB  equ       $80           ;PTR
-W0      equ       $82
-W1      equ       $84           ;PTR
+ZPSTRT  equ       $80
+W0      equ       ZPSTRT+0
+W1      equ       W0+2          ;PTR
+P0Y     equ       W1+2
+P0X     equ       P0Y+1
+;; MAIN
 
-foo:    
         jsr SetPMG
+        lda #$80
+        sta P0X
+        sta P0Y
 .1
-        stx 712
-        sleep 1
-        inx
-        jmp .1
+        jsr ReadJoy
+        lda P0X 
+        sta 712
+        ;sta HPOS0               
+        ; ldy P0Y $
+        ; jsr DrawP $
+        jmp .1 
         rts
 
 SetPMG SUBROUTINE        
-        store16 MYPMB,SMYPMB
-        lda SMYPMB+1
+        lda #$12
         sta PMBASE
 
         ;; clear all PM ram
-        move16 SMYPMB,W0
-        store16 MYPMB+1024,W1
+        store16 MYPMB+$200,W0
+        store16 MYPMB+$400,W1
         ldy #0
 .0        
         lda #129
@@ -122,7 +132,8 @@ SetPMG SUBROUTINE
         bne .0
 
         ;; turn on DMA, set color and position
-        lda #$2e
+        lda SDMCTL
+        ora #24
         sta SDMCTL
         lda #3
         sta GRATCL
@@ -143,3 +154,48 @@ Wait    SUBROUTINE
         bne .gettime
         rts
 
+;; Y = Y location ( at bottom )
+;; Uses X,A
+DrawP   SUBROUTINE
+.1
+        ldx #8
+        lda MYPMB,x
+        sta MYPMB+$200,Y
+        dey
+        dex
+        bne .1
+        rts
+        
+ReadJoy SUBROUTINE
+        lda STICK0
+        cmp #14
+        beq .up
+        cmp #13
+        beq .down
+        cmp #11
+        beq .left
+        cmp #7
+        beq .right
+        rts
+.up
+        inc P0Y
+        rts
+.left
+        dec P0X
+        rts
+.right
+        inc P0X
+        rts
+.down   
+        dec P0Y
+        rts
+        org $1200
+        ;; power pellet
+        dc.b %00000000
+        dc.b %00011000
+        dc.b %00111100
+        dc.b %00111100
+        dc.b %00111100
+        dc.b %00111100
+        dc.b %00011000
+        dc.b %00000000
