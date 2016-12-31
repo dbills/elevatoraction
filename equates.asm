@@ -16,7 +16,11 @@ CDTMV2  equ       $21a          ;system timer2
 CDTMA2  equ       $228          ; timer2 addr
 SETVBV  equ       $e45c
 SDLST   equ       $230          ;dlist shadow
-
+;
+; Equates
+;
+; Without these, the program won't assemble properly
+;
 ICCOM  equ  $342		; the COMMAND byte in the IOCB
 ICBAL  equ  $344		; the low byte of the buffer address (filename)
 ICBLL  equ  $348		; the low byte of the buffer length
