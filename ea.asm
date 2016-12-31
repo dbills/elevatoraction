@@ -2,6 +2,9 @@
         org $0700-6
         HEX     ff ff 00 07 00 07
 
+;        INCLUDE "macros.asm"
+;        INCLUDE "equates.asm"
+
         ;; wait for number seconds in {1}
         ;; no more than 255/60 seconds possible
         mac sleep
