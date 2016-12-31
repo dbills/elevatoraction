@@ -82,7 +82,7 @@
         endm
 
 ;; EQUATES
-P0HGT   equ       8            ;player 0 height
+P0HGT   equ       7            ;player 0 height ( 0 based )
 MYPMB   equ       $1200
 PMBASE  equ       $D407         ;54279
 SDMCTL  equ       $22F          ;559
@@ -94,6 +94,9 @@ JIFFYH  equ       18
 JIFFYM  equ       19
 JIFFYL  equ       20
 STICK0  equ       632
+CDTMV1  equ       $218          ;system timer1
+CDTMV2  equ       $21a          ;system timer2
+CDTMA2  equ       $228          ; timer2 addr
 
 ZPSTRT  equ       $80
 W0      equ       ZPSTRT+0
@@ -103,18 +106,29 @@ P0X     equ       P0Y+1
 ;; MAIN
 
         jsr SetPMG
+        ;; install sys timer2 routine
+        store16 MoveAll,CDTMA2
+        
         lda #$80
         sta P0X
         sta P0Y
+        lda #60
+        sta CDTMV2
 .1
-        jsr ReadJoy
-        lda P0X 
-        sta 712
-        ;sta HPOS0               
-        ; ldy P0Y $
-        ; jsr DrawP $
         jmp .1 
         rts
+
+MoveAll SUBROUTINE      
+        jsr ReadJoy
+        lda P0X 
+;        sta 712
+        sta HPOS0               
+        ldy P0Y 
+        jsr DrawP
+        lda #1
+        sta CDTMV2
+        rts
+
 
 SetPMG SUBROUTINE        
         lda #$12
@@ -157,13 +171,13 @@ Wait    SUBROUTINE
 ;; Y = Y location ( at bottom )
 ;; Uses X,A
 DrawP   SUBROUTINE
+        ldx #P0HGT
 .1
-        ldx #8
         lda MYPMB,x
-        sta MYPMB+$200,Y
+        sta MYPMB+$200,y
         dey
         dex
-        bne .1
+        bpl .1
         rts
         
 ReadJoy SUBROUTINE
