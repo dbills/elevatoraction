@@ -97,6 +97,23 @@ STICK0  equ       632
 CDTMV1  equ       $218          ;system timer1
 CDTMV2  equ       $21a          ;system timer2
 CDTMA2  equ       $228          ; timer2 addr
+SETVBV  equ       $e45c
+SDLST   equ       $230          ;dlist shadow
+;
+; Equates
+;
+; Without these, the program won't assemble properly
+;
+ICCOM  equ  $342		; the COMMAND byte in the IOCB
+ICBAL  equ  $344		; the low byte of the buffer address (filename)
+ICBLL  equ  $348		; the low byte of the buffer length
+ICAX1  equ  $34A		; auxiliary byte 1: type
+ICAX2  equ  $34B		; auxiliary byte 2: mode
+;
+CIO     equ  $E456		; Central Input/Output routine
+ROWCRS  equ  84		; ROW CuRSor—y position
+COLCRS  equ  85		; COLumn CuRSor—x position
+ATACHR  equ  763		; where line color goes for DRAWTO
 
 ZPSTRT  equ       $80
 W0      equ       ZPSTRT+0
@@ -104,10 +121,30 @@ W1      equ       W0+2          ;PTR
 P0Y     equ       W1+2
 P0X     equ       P0Y+1
 ;; MAIN
-
-        jsr SetPMG
+        ;jsr SetPMG
         ;; install sys timer2 routine
-        store16 MoveAll,CDTMA2
+        ;store16 MoveAll,CDTMA2
+        ;; install DLIST
+
+        lda SDLST               ;save existing DL
+        pha
+        lda SDLST+1
+        pha
+
+        store16 MYDL,SDLST
+
+        sleep 1
+        sleep 1
+        sleep 1
+        sleep 1
+        sleep 1
+
+
+        pla
+        sta SDLST+1
+        pla
+        sta SDLST
+        rts
         
         lda #$80
         sta P0X
@@ -203,6 +240,157 @@ ReadJoy SUBROUTINE
 .down   
         dec P0Y
         rts
+
+;; atascii "S:"
+SNAME:                          
+        dc.b $53 
+        dc.b $3A
+        dc.b $9b
+;
+; CLOSE channel
+;
+; Parameter: X register holds IOCB number
+; On exit: Y register holds error code
+;
+CLOSE   SUBROUTINE
+        LDA #12                	; close command
+        STA ICCOM,X		; in place
+        JMP CIO			; do the real work
+
+;
+;
+; OPEN channel,type,mode,file
+;
+; Parameters: X register holds IOCB number
+;		 A register holds type
+;		 Y register holds mode
+;		 the address of the file/device
+;		 name must already be set up
+;		 in the IOCB–
+; On exit:		Y register holds error code
+;
+
+
+
+OPEN     SUBROUTINE
+        STA ICAX1,x		; the type value
+        TYA 
+        sta ICAX2,x
+        LDA #3		; OPEN command
+        sta ICCOM,x
+        JMP CIO		; the real work
+;
+;
+;GRAPHICS mode
+;
+;Parameter: A register holds desired mode
+;On exit: Y register holds error code
+;
+GRAPHICS        SUBROUTINE
+                PHA			; save the mode for a moment
+                LDX #$60		; always use IOCB #6
+                JSR CLOSE		; be sure it is closed
+                LDX #$60		; the same IOCB again
+                LDA #SNAME & $FF        ; the S device name
+                sta ICBAL,x            ; must be put in place
+                LDA #SNAME / $100	; before we go further
+                STA ICBAL + 1,x	; (take this part on faith)
+                PLA			; recover the GRAPHICS mode
+                TAY			; put it where OPEN wants it
+                AND #16 + 32            ; isolate the text window and no-clear bits
+                EOR #16		; flip state of the text window bit
+                ORA #12		; allow both input and output
+                JMP OPEN		; do this part of the work
+;
+;
+;PUT channel,byte
+;
+;Parameters: A register holds byte to output
+;		 X register holds channel number
+; On exit: Y register holds error code
+;
+PUT     SUBROUTINE
+        TAY			; save the byte here for a moment
+        LDA #0
+        STA ICBLL,x		; $0000 to length
+        STA ICBLL + 1,x	; as noted last month
+        LDA #11		; the command value
+        STA ICCOM,x
+        TYA			; data byte back where CIO wants it
+        JMP CIO
+;
+;
+; byte = GET( channel )
+;
+; Parameter: X register holds IOCB number
+;On exit: A register holds byte from GET call
+;
+GET     SUBROUTINE
+        LDA #0
+        STA ICBLL,x             ; $0000 to length…
+        STA ICBLL + 1,x	; as noted last month
+        LDA #7		; the command value
+        STA ICCOM,x           ; where CIO wants it
+        JMP CIO		; believe it or else, that's all
+;
+;
+;PLOT x,y,color
+;
+; Parameters: A register holds color
+;		 X register holds x location
+;		 Y register holds y location
+; NOTE: not for use with GR.8 or GR.24
+;
+PLOT    SUBROUTINE
+        STX COLCRS		;see my August column
+        STY ROWCRS		;these are just POKEs
+        LDX #$60	          ;the S: graphics channel
+        JMP PUT		;color is already in A
+;
+;
+;byte = LOCATE( x,y )
+;
+;Parameters: X register holds x location
+;		 Y register holds y location
+;On exit: A register holds color of point at (x,y)
+;
+LOCATE  SUBROUTINE
+        STX COLCRS		;again, see column
+        STY ROWCRS		;from two months ago
+        LDX #$60	          ;the S: graphics channel
+        JMP GET		;color returned in A
+;
+;
+;DRAWTO x, y, color
+;
+;Parameters: A register holds color
+;		 X register holds x location
+;	  Y register holds y location
+; NOTE: not for use with GR.8 or GR.24
+;
+DRAWTO  SUBROUTINE
+        STX COLCRS		; once more: see the article
+        STY ROWCRS		; from two months ago
+        STA ATACHR		; location 763, also in that article
+        LDX #$60	          ; again, we use IOCB #6
+        LDA #17		; the XIO number for DRAWTO
+        STA ICCOM,x		; is actually the command number
+        JMP CIO		; and that's all we really need to do
+
+MYDL
+        dc.b $70
+        dc.b $70
+        dc.b $70
+        dc.b $4D
+        dc.b SCREEN1&$ff
+        dc.b SCREEN1>>8
+        REPEAT 192/2
+        dc.b $d                 ;graphics 7
+        REPEND
+        dc.b $41
+        dc.b MYDL&$ff
+        dc.b MYDL>>8
+
         org $1200
         ;; power pellet
         dc.b %00000000
@@ -213,3 +401,9 @@ ReadJoy SUBROUTINE
         dc.b %00111100
         dc.b %00011000
         dc.b %00000000
+
+        org $2000
+SCREEN1
+        REPEAT 40*97
+        dc.b 139
+        REPEND
