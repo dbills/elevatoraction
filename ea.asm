@@ -7,7 +7,7 @@
 
 
 
-ZPSTRT  equ       $a0
+ZPSTRT  equ       $80
 W0      equ       ZPSTRT+0
 W1      equ       W0+2          ;PTR
 P0Y     equ       W1+2
@@ -141,7 +141,7 @@ MYDL
         dc.b $4D
         dc.b SCREEN1&$ff
         dc.b SCREEN1>>8
-        REPEAT 192/2
+        REPEAT 192/2-1
         dc.b $d                 ;graphics 7
         REPEND
         dc.b $41
@@ -160,17 +160,15 @@ MYPMB
         dc.b %00000000
 
         org $2000
-#ifconst TBL
+
+
+SCREEN1
+        REPEAT 40*96
+        dc.b 1
+        REPEND
 ROWTBL
 REPI set 0
         REPEAT 96
         dc.w SCREEN1 + 96 * REPI
 REPI set REPI+1
-        REPEND
-
-        org $2400
-#endif
-SCREEN1
-        REPEAT 40*96
-        dc.b 1
         REPEND
