@@ -7,23 +7,23 @@
 
 
 
-ZPSTRT  equ       $80
+ZPSTRT  equ       $a0
 W0      equ       ZPSTRT+0
 W1      equ       W0+2          ;PTR
 P0Y     equ       W1+2
 P0X     equ       P0Y+1
+S0      equ       P0X+1
 ;; MAIN
         ;jsr SetPMG
         ;; install sys timer2 routine
         ;store16 MoveAll,CDTMA2
         ;; install DLIST
 
-        lda SDLST               ;save existing DL
-        pha
-        lda SDLST+1
-        pha
-
+        move16 SDLST,W1
+        
+        disvbi        
         store16 MYDL,SDLST
+        envbi
 
         sleep 1
         sleep 1
@@ -32,11 +32,11 @@ P0X     equ       P0Y+1
         sleep 1
 
 
-        pla
-        sta SDLST+1
-        pla
-        sta SDLST
-        rts
+        disvbi
+        move16 W1,SDLST
+        envbi
+
+        brk
         
         lda #$80
         sta P0X
@@ -133,7 +133,7 @@ ReadJoy SUBROUTINE
         dec P0Y
         rts
 
-        org $1100
+        org $1200
 MYDL
         dc.b $70
         dc.b $70
@@ -147,8 +147,8 @@ MYDL
         dc.b $41
         dc.b MYDL&$ff
         dc.b MYDL>>8
-
-        org $1200
+MYPMB
+        org $1600
         ;; power pellet
         dc.b %00000000
         dc.b %00011000
@@ -159,7 +159,8 @@ MYDL
         dc.b %00011000
         dc.b %00000000
 
-        org $1600
+        org $2000
+#ifconst TBL
 ROWTBL
 REPI set 0
         REPEAT 96
@@ -167,7 +168,8 @@ REPI set 0
 REPI set REPI+1
         REPEND
 
-        org $2000
+        org $2400
+#endif
 SCREEN1
         REPEAT 40*96
         dc.b 1

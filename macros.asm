@@ -80,3 +80,36 @@
         inc [{1}]+1
 .done
         endm
+
+    ;; move word index by Y, does correct pointer
+    ;; arithmetic for 'word'
+    ;; move16y source[Y],dest
+    mac move16y
+
+    tya
+    pha
+    asl                         ; x*2 since it's a word
+    tay
+    lda [{1}],y
+    sta [{2}]
+    iny
+    lda [{1}],y
+    sta [{2}]+1
+    pla
+    tay
+
+    endm
+
+    mac disvbi
+
+    lda #0
+    sta NMIEN
+
+    endm
+
+    mac envbi
+
+    lda #$40
+    sta NMIEN
+
+    endm

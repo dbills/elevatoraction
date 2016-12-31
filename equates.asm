@@ -1,6 +1,5 @@
 ;; EQUATES
 P0HGT   equ       7            ;player 0 height ( 0 based )
-MYPMB   equ       $1200
 PMBASE  equ       $D407         ;54279
 SDMCTL  equ       $22F          ;559
 GRATCL  equ       $D01D         ;53277
@@ -16,6 +15,7 @@ CDTMV2  equ       $21a          ;system timer2
 CDTMA2  equ       $228          ; timer2 addr
 SETVBV  equ       $e45c
 SDLST   equ       $230          ;dlist shadow
+NMIEN   equ       $d40e         ;nmi enable
 ;
 ; Equates
 ;
