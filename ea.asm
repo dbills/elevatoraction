@@ -294,8 +294,16 @@ MYDL
         dc.b %00011000
         dc.b %00000000
 
+        org $1600
+ROWTBL
+REPI set 0
+        REPEAT 96
+        dc.w SCREEN1 + 96 * REPI
+REPI set REPI+1
+        REPEND
+
         org $2000
 SCREEN1
-        REPEAT 40*97
-        dc.b 139
+        REPEAT 40*96
+        dc.b 1
         REPEND
