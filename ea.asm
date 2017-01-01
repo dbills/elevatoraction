@@ -1,6 +1,9 @@
-        processor 6502
-        org $0700-6
-        HEX     ff ff 00 07 00 07
+>        processor 6502
+ORG     equ $4000
+        org ORG-6
+        dc.w $ffff
+        dc.w ORG
+        dc.w 0
 
         INCLUDE "macros.asm"
         INCLUDE "equates.asm"
@@ -13,24 +16,33 @@ W1      equ       W0+2          ;PTR
 P0Y     equ       W1+2
 P0X     equ       P0Y+1
 S0      equ       P0X+1
+S1      equ       S0+1
 ;; MAIN
         ;jsr SetPMG
         ;; install sys timer2 routine
         ;store16 MoveAll,CDTMA2
         ;; install DLIST
-
+        lda #42
         move16 SDLST,W1
         
         disvbi        
         store16 MYDL,SDLST
         envbi
 
-        sleep 1
-        sleep 1
-        sleep 1
-        sleep 1
-        sleep 1
+        lda #0
+        sta S1
 
+
+        ldx #1
+        ldy #0
+        lda #$80                 ; pixel 10
+        jsr Plot
+        ldx #0
+        ldy #1
+        lda #$C0
+        jsr Plot
+
+        jsr WaitUp
 
         disvbi
         move16 W1,SDLST
@@ -108,7 +120,12 @@ DrawP   SUBROUTINE
         dex
         bpl .1
         rts
-        
+WaitUp  SUBROUTINE
+.0
+        lda STICK0
+        cmp #14
+        bne .0
+        rts        
 ReadJoy SUBROUTINE
         lda STICK0
         cmp #14
@@ -133,7 +150,38 @@ ReadJoy SUBROUTINE
         dec P0Y
         rts
 
-        org $1200
+Plot    SUBROUTINE
+        sta S1
+        move16y ROWTBL,W0       ;load W0 with screen row addr
+        txa                     ;X/2 S0=Remainder
+        ldx #0             
+        stx S0
+        lsr
+        bcc .1
+        inx                     ;R+=1
+.1
+        lsr
+        bcc .2
+        inx
+        inx                     ;R+=2
+.2
+
+        tay                     ;Y=byte offset in row
+        lda S1                  ;A=pixel pattern
+.3
+        dex
+        bmi .4
+        lsr
+        lsr
+        ;; c cannot be set unless a crappy pixel pattern was passed in           
+        jmp .3
+.4
+        ;; A is mask byte
+;        ora (W0),y
+        sta (W0),y
+        rts
+
+        org ORG+$400*2
 MYDL
         dc.b $70
         dc.b $70
@@ -141,14 +189,14 @@ MYDL
         dc.b $4D
         dc.b SCREEN1&$ff
         dc.b SCREEN1>>8
-        REPEAT 192/2-1
+        REPEAT 192/2-1          ;-1 because LMS is first mode line
         dc.b $d                 ;graphics 7
         REPEND
         dc.b $41
         dc.b MYDL&$ff
         dc.b MYDL>>8
 MYPMB
-        org $1600
+        org ORG+$400*3,$DE
         ;; power pellet
         dc.b %00000000
         dc.b %00011000
@@ -159,16 +207,16 @@ MYPMB
         dc.b %00011000
         dc.b %00000000
 
-        org $2000
+        org ORG+$400*4,$DE
 
 
 SCREEN1
         REPEAT 40*96
-        dc.b 1
+        dc.b 0
         REPEND
 ROWTBL
 REPI set 0
         REPEAT 96
-        dc.w SCREEN1 + 96 * REPI
+        dc.w SCREEN1 + 40 * REPI
 REPI set REPI+1
         REPEND
