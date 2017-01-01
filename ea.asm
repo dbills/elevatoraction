@@ -17,6 +17,7 @@ P0Y     equ       W1+2
 P0X     equ       P0Y+1
 S0      equ       P0X+1
 S1      equ       S0+1
+S2      equ       S1+1
 ;; MAIN
         ;jsr SetPMG
         ;; install sys timer2 routine
@@ -29,21 +30,41 @@ S1      equ       S0+1
         store16 MYDL,SDLST
         envbi
 
-        lda #0
-        sta S1
-
-
-        ldx #1
-        ldy #0
+.s
+        lda #95
+        sta S2
+.0
+        ldx S2
+        ldy S2
         lda #$80                 ; pixel 10
         jsr Plot
-        ldx #0
-        ldy #1
-        lda #$C0
+        dec S2
+        bne .0
+
+        lda #95
+        sta S2
+.01
+        ldx S2
+        ldy S2
+        lda #$C0                 ; pixel 10
         jsr Plot
+        dec S2
+        bne .01
+
+        lda #95
+        sta S2
+.02
+        ldx S2
+        ldy S2
+        lda #$40                 ; pixel 10
+        jsr Plot
+        dec S2
+        bne .02
 
         jsr WaitUp
-
+        
+        jmp .s
+alldone
         disvbi
         move16 W1,SDLST
         envbi
@@ -124,7 +145,9 @@ WaitUp  SUBROUTINE
 .0
         lda STICK0
         cmp #14
-        bne .0
+        bne .done
+        jmp alldone
+.done
         rts        
 ReadJoy SUBROUTINE
         lda STICK0
@@ -174,7 +197,8 @@ Plot    SUBROUTINE
         lsr
         lsr
         ;; c cannot be set unless a crappy pixel pattern was passed in           
-        jmp .3
+;        jmp .3
+         bcc .3
 .4
         ;; A is mask byte
 ;        ora (W0),y
